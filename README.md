@@ -1,5 +1,5 @@
-# Face-Recognition-Matlab-Python
-face recognition use Matlab and Python 
+# Face-Recognition-Python
+face recognition use Python 
 
 ### Datasets
 #### Use Real and Fake Face Detection
