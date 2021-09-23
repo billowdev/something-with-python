@@ -5,22 +5,21 @@
 - pip install numpy
 """
 import os 
-import cv2 # Open-CV
+import cv2  # Open-CV
 import numpy as np
 
 # https://github.com/opencv/opencv/tree/master/data/haarcascades
 # --- เตรียม haarcascade eye และ face --- #
-dirname = os.path.dirname(__file__) # เช็ค path
-h_eye = os.path.join(dirname, 'haarcascade_eye.xml') # path ของ haarcascade eye
-h_face = os.path.join(dirname, 'haarcascade_frontalface_default.xml') # path ของ haarcascade face
-eye_cascade = cv2.CascadeClassifier(h_eye) # โหลด haarcascade eye
-face_cascade = cv2.CascadeClassifier(h_face) # โหลด haarcascade face
+dirname = os.path.dirname(__file__)  # เช็ค path
+h_eye = os.path.join(dirname, 'haarcascade_eye.xml')  # path ของ haarcascade eye
+h_face = os.path.join(dirname, 'haarcascade_frontalface_default.xml')  # path ของ haarcascade face
+eye_cascade = cv2.CascadeClassifier(h_eye)  # โหลด haarcascade eye
+face_cascade = cv2.CascadeClassifier(h_face)  # โหลด haarcascade face
+
 
 # ฟังก์ชันสำหรับ ตรวจจับใบหน้า
-
-def face_detection_filter(faces, filterImg, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w):
-	for (x, y, w, h) in faces: 
-		
+def face_detection_filter(faces, filter_img, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w):
+	for (x, y, w, h) in faces:
 		# พิกัดใบหน้า
 		face_w, face_h = w, h
 		face_x1, face_x2 = x, (x + face_w)
@@ -51,7 +50,7 @@ def face_detection_filter(faces, filterImg, gray, ret, img, o_filter_h, o_filter
 		filter_height = filter_y2 - filter_y1
 
 		# ลดขนาด ฟิลเตอร์ให้พอดีกับใบหน้า โดยการอินเทอร์โพเลชัน
-		filterImg = cv2.resize(filterImg, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
+		filter_img = cv2.resize(filter_img, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
 		mask = cv2.resize(o_mask_inv, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
 		mask_inv = cv2.resize(o_mask_inv, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
 
@@ -61,19 +60,19 @@ def face_detection_filter(faces, filterImg, gray, ret, img, o_filter_h, o_filter
 
 		# รูปภาพต้นฉบับในพื้นหลังที่ไม่มีฟิลเตอร์
 		roi_bg = cv2.bitwise_and(roi, roi, mask = mask)
-		roi_fg = cv2.bitwise_and(filterImg, filterImg, mask = mask_inv)
+		roi_fg = cv2.bitwise_and(filter_img, filter_img, mask = mask_inv)
 		# ภาพเอาท์พุทที่ขนาดเท่ากันกับภาพดั้งเดิม
 		dst = cv2.add(roi, bg, roi_fg)
 
 		# ใส่กลับในภาพดั้งเดิม
 		img[filter_y1:filter_y2, filter_x1:filter_x2] = dst
-
+		break
 
 # อ่านภาพ ฟิลเตอร์
-filterImg = cv2.imread('testfilter.png')
+filter_img = cv2.imread('testfilter.png')
 
 # ดึงรูปร่างของฟิลเตอร์มา
-o_filter_h, o_filter_w, filter_channels = filterImg.shape
+o_filter_h, o_filter_w, filter_channels = filter_img.shape
 
 # แปลงเป็นสีเทา
 filter_gray = cv2.cvtColor(witch, cv2.COLOR_BGR2GRAY)
@@ -99,7 +98,7 @@ while True:
 	faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
 	# ใช้ฟังก์ชันที่ประกาศไว้สำหรับตรวจจับหน้าและทำการใส่ฟิลเตอร์
-	face_detection_filter(faces, filterImg, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w)
+	face_detection_filter(faces, filter_img, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w)
 
 	# แสดงภาพ
 	cv2.imshow('img', img)
