@@ -24,22 +24,23 @@ def face_detection_filter(faces, filter_img, gray, ret, img, o_filter_h, o_filte
 		face_w, face_h = w, h
 		face_x1, face_x2 = x, (x + face_w)
 		face_y1, face_y2 = y, y + face_h
-
+		
 		# ทำให้ฟิลเตอร์สัมพันธ์กับใบหน้าโดยการสเกล
-		filter_w = int(1.5 * face_w)
-		filter_h = int(filter_w * o_filter_h / o_filter_w)
+		filter_width = int(1.5 * face_w)
+		filter_height = int(filter_width * o_filter_h / o_filter_w)
 
 		# ตั้งค่าพิกัดของฟิลเตอร์
-		filter_x1 = face_x2 - int(face_w/2) - int(filter_w/2)
-		filter_x2 = filter_x1 + filter_w
+		filter_x1 = face_x2 - int(face_w/2) - int(filter_width/2)
+		filter_x2 = filter_x1 + filter_width
 		filter_y1 = face_y1 - int(face_h*1.25)
-		filter_y2 = filter_y1 + filter_h
+		filter_y2 = filter_y1 + filter_height
 
 		# เข็คเพื่อไม่ให้หลุดเฟรม
 		if filter_x1 < 0:
 			filter_x1 = 0
 		if filter_y1 < 0:
 			filter_y1 = 0
+
 		if filter_x2 > img_w:
 			filter_x2 = img_w
 		if filter_y2 > img_h:
@@ -59,13 +60,15 @@ def face_detection_filter(faces, filter_img, gray, ret, img, o_filter_h, o_filte
 		roi = img[filter_y1:filter_y2, filter_x1:filter_x2]
 
 		# รูปภาพต้นฉบับในพื้นหลังที่ไม่มีฟิลเตอร์
-		roi_bg = cv2.bitwise_and(roi, roi, mask = mask)
+		roi_bg = cv2.bitwise_and(roi, roi, mask=mask)
 		roi_fg = cv2.bitwise_and(filter_img, filter_img, mask = mask_inv)
 		# ภาพเอาท์พุทที่ขนาดเท่ากันกับภาพดั้งเดิม
-		dst = cv2.add(roi, bg, roi_fg)
+		dst = cv2.add(roi_bg, roi_fg)
 
 		# ใส่กลับในภาพดั้งเดิม
 		img[filter_y1:filter_y2, filter_x1:filter_x2] = dst
+
+
 		break
 
 # อ่านภาพ ฟิลเตอร์
@@ -75,11 +78,10 @@ filter_img = cv2.imread('testfilter.png')
 o_filter_h, o_filter_w, filter_channels = filter_img.shape
 
 # แปลงเป็นสีเทา
-filter_gray = cv2.cvtColor(witch, cv2.COLOR_BGR2GRAY)
+filter_gray = cv2.cvtColor(filter_img, cv2.COLOR_BGR2GRAY)
 
 # สร้างหน้ากาก 
 ret, o_mask = cv2.threshold(filter_gray, 10, 255, cv2.THRESH_BINARY_INV)
-
 # inverse ฟิลเตอร์
 o_mask_inv = cv2.bitwise_not(o_mask)
 
@@ -99,7 +101,7 @@ while True:
 
 	# ใช้ฟังก์ชันที่ประกาศไว้สำหรับตรวจจับหน้าและทำการใส่ฟิลเตอร์
 	face_detection_filter(faces, filter_img, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w)
-
+		
 	# แสดงภาพ
 	cv2.imshow('img', img)
 
@@ -111,4 +113,3 @@ while True:
 cap.release()
 # ปิดหน้าต่าง figure
 cv2.destroyAllWindows() 
-
