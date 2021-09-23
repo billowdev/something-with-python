@@ -73,7 +73,7 @@ def face_detection_filter(faces, filter_img, gray, ret, img, o_filter_h, o_filte
 
 
 # อ่านภาพ ฟิลเตอร์
-filter_img = cv2.imread('_filter/rabbit.png')
+filter_img = cv2.imread('_filter/nanoglasses.png')
 
 # ดึงรูปร่างของฟิลเตอร์มา
 o_filter_h, o_filter_w, filter_channels = filter_img.shape
