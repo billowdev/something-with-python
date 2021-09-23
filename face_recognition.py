@@ -3,65 +3,113 @@
 - pip install opencv-python
 ### https://pypi.org/project/numpy/
 - pip install numpy
-
-haarcascades for face and eye
 """
-# https://github.com/opencv/opencv/tree/master/data/haarcascades
-
-import os
-import cv2
+import os 
+import cv2 # Open-CV
 import numpy as np
 
-def face_detection(faces, gray, img):
-	for (x, y, w, h) in faces:
-		# img = frame[y-10:y+h+10, x-10:x+w+10][:,:,::-1]
-		img = cv2.rectangle(img, (x,y), (x+w, y+h), (255,0,0), 2)
-		# พื้นที่ใบหน้า
-		g = gray[y:y+h, x:x+h]
-		c = img[y:y+h, x:x+h]
-
-		# Detect eye
-		eyes = eye_cascade.detectMultiScale(g)
-		
-		# for eye
-		for (ex, ey, ew, eh) in eyes:
-			# วาดสี่เหลี่ยม
-			cv2.rectangle(c, (ex, ey), (ex+ew, ey+eh), (0,255,0), 2)
-	
-# https://stackoverflow.com/questions/918154/relative-paths-in-python
-"""
-import os
-dirname = os.path.dirname(__file__)
-filename = os.path.join(dirname, 'relative/path/to/file/you/want')
-
-"""
+# https://github.com/opencv/opencv/tree/master/data/haarcascades
 # --- เตรียม haarcascade eye และ face --- #
-dirname = os.path.dirname(__file__)
-h_eye = os.path.join(dirname, 'haarcascade_eye.xml')
-h_face = os.path.join(dirname, 'haarcascade_frontalface_default.xml')
+dirname = os.path.dirname(__file__) # เช็ค path
+h_eye = os.path.join(dirname, 'haarcascade_eye.xml') # path ของ haarcascade eye
+h_face = os.path.join(dirname, 'haarcascade_frontalface_default.xml') # path ของ haarcascade face
+eye_cascade = cv2.CascadeClassifier(h_eye) # โหลด haarcascade eye
+face_cascade = cv2.CascadeClassifier(h_face) # โหลด haarcascade face
 
-eye_cascade = cv2.CascadeClassifier(h_eye)
-face_cascade = cv2.CascadeClassifier(h_face)
-#read image
-img = cv2.imread('Untitled-1.jpg')
-#convert to gray
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-#detect faces
-faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+# ฟังก์ชันสำหรับ ตรวจจับใบหน้า
 
-face_detection(faces, gray, img)
+def face_detection_filter(faces, filterImg, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w):
+	for (x, y, w, h) in faces: 
+		
+		# พิกัดใบหน้า
+		face_w, face_h = w, h
+		face_x1, face_x2 = x, (x + face_w)
+		face_y1, face_y2 = y, y + face_h
 
-cv2.imshow('img',img) #shows image
-cv2.waitKey(0) #waits until a key is pressed to progress
-cv2.destroyAllWindows() #closes windows
+		# ทำให้ฟิลเตอร์สัมพันธ์กับใบหน้าโดยการสเกล
+		filter_w = int(1.5 * face_w)
+		filter_h = int(filter_w * o_filter_h / o_filter_w)
+
+		# ตั้งค่าพิกัดของฟิลเตอร์
+		filter_x1 = face_x2 - int(face_w/2) - int(filter_w/2)
+		filter_x2 = filter_x1 + filter_w
+		filter_y1 = face_y1 - int(face_h*1.25)
+		filter_y2 = filter_y1 + filter_h
+
+		# เข็คเพื่อไม่ให้หลุดเฟรม
+		if filter_x1 < 0:
+			filter_x1 = 0
+		if filter_y1 < 0:
+			filter_y1 = 0
+		if filter_x2 > img_w:
+			filter_x2 = img_w
+		if filter_y2 > img_h:
+			filter_y2 = img_h
+
+		# การเปลี่ยนแปลงของเฟรม
+		filter_width = filter_x2 - filter_x1
+		filter_height = filter_y2 - filter_y1
+
+		# ลดขนาด ฟิลเตอร์ให้พอดีกับใบหน้า โดยการอินเทอร์โพเลชัน
+		filterImg = cv2.resize(filterImg, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
+		mask = cv2.resize(o_mask_inv, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
+		mask_inv = cv2.resize(o_mask_inv, (filter_width, filter_height), interpolation = cv2.INTER_AREA)
+
+		# rectangular region of interest (ROI)
+		# รับ ROI ของฟิลเตอร์ จากพื้นหลัง
+		roi = img[filter_y1:filter_y2, filter_x1:filter_x2]
+
+		# รูปภาพต้นฉบับในพื้นหลังที่ไม่มีฟิลเตอร์
+		roi_bg = cv2.bitwise_and(roi, roi, mask = mask)
+		roi_fg = cv2.bitwise_and(filterImg, filterImg, mask = mask_inv)
+		# ภาพเอาท์พุทที่ขนาดเท่ากันกับภาพดั้งเดิม
+		dst = cv2.add(roi, bg, roi_fg)
+
+		# ใส่กลับในภาพดั้งเดิม
+		img[filter_y1:filter_y2, filter_x1:filter_x2] = dst
+
+
+# อ่านภาพ ฟิลเตอร์
+filterImg = cv2.imread('testfilter.png')
+
+# ดึงรูปร่างของฟิลเตอร์มา
+o_filter_h, o_filter_w, filter_channels = filterImg.shape
+
+# แปลงเป็นสีเทา
+filter_gray = cv2.cvtColor(witch, cv2.COLOR_BGR2GRAY)
+
+# สร้างหน้ากาก 
+ret, o_mask = cv2.threshold(filter_gray, 10, 255, cv2.THRESH_BINARY_INV)
+
+# inverse ฟิลเตอร์
+o_mask_inv = cv2.bitwise_not(o_mask)
 
 # ใช้กล้อง
-# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
+ret, img = cap.read()
+img_h, img_w = img.shape[:2]
 
-# while True:
-# 	_, frame = cap.read()
-# 	face_detection(frame)
+while True:
+	# อ่านภาพจาก เฟรม
+	ret, img = cap.read()
+	# แปลงเป็นภาพระดับเทา
+	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-# 	if cv2.waitKey(1) & 0xFF == ord('q'):
-# 		break
+	# หาหน้าในภาพ โดยใช้ classififier
+	faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+	# ใช้ฟังก์ชันที่ประกาศไว้สำหรับตรวจจับหน้าและทำการใส่ฟิลเตอร์
+	face_detection_filter(faces, filterImg, gray, ret, img, o_filter_h, o_filter_w, img_h, img_w)
+
+	# แสดงภาพ
+	cv2.imshow('img', img)
+
+	# สำหรับหยุดการรัน
+	if cv2.waitKey(1) == ord('q'):
+		break
+
+# ปิดกล้อง
+cap.release()
+# ปิดหน้าต่าง figure
+cv2.destroyAllWindows() 
 
